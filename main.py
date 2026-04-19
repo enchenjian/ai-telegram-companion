@@ -1,7 +1,5 @@
 import os
-import asyncio
 import time
-import requests
 
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
@@ -49,7 +47,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     memory[user_id].append(f"User: {text}")
     context_text = "\n".join(memory[user_id][-10:])
-
     prompt = f"{SYSTEM_PROMPT}\n\n{context_text}\nVega:"
 
     try:
@@ -58,30 +55,29 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response = f"Error: {e}"
 
     memory[user_id].append(f"Vega: {response}")
-
     await update.message.reply_text(response)
 
 
-# 🎙 Voice note handler
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.chat_id
     file = await context.bot.get_file(update.message.voice.file_id)
-    file_path = "voice.ogg"
+    file_path = f"voice_{user_id}.ogg"
     await file.download_to_drive(file_path)
 
-    # Simple placeholder (Gemini STT not direct here)
     text = "User sent a voice note. Respond naturally."
-
-    response = client.models.generate_content(model="gemini-1.5-flash", contents=f"{SYSTEM_PROMPT}\n{text}").text
+    response = client.models.generate_content(
+        model="gemini-1.5-flash",
+        contents=f"{SYSTEM_PROMPT}\n{text}"
+    ).text
 
     await update.message.reply_text(response)
 
 
-# 🖼 Image handler
 async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.chat_id
     photo = update.message.photo[-1]
     file = await context.bot.get_file(photo.file_id)
-
-    file_path = "image.jpg"
+    file_path = f"image_{user_id}.jpg"
     await file.download_to_drive(file_path)
 
     with open(file_path, "rb") as img:
@@ -93,12 +89,12 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             SYSTEM_PROMPT,
             genai.types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
         ],
-    )
+    ).text
 
-    await update.message.reply_text(response.text)
+    await update.message.reply_text(response)
 
 
-async def main():
+def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
@@ -106,7 +102,8 @@ async def main():
     app.add_handler(MessageHandler(filters.PHOTO, handle_image))
 
     print("Vega is alive...")
-    await app.run_polling()
+    app.run_polling()
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
