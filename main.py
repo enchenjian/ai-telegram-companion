@@ -50,7 +50,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     prompt = f"{SYSTEM_PROMPT}\n\n{context_text}\nVega:"
 
     try:
-        response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt).text
+        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt).text
     except Exception as e:
         response = f"Error: {e}"
 
@@ -84,7 +84,7 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         image_bytes = img.read()
 
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-2.0-flash",
         contents=[
             SYSTEM_PROMPT,
             genai.types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
