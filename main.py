@@ -66,7 +66,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = "User sent a voice note. Respond naturally."
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
+        model="gemini-2.0-flash",
         contents=f"{SYSTEM_PROMPT}\n{text}"
     ).text
 
