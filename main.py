@@ -6,13 +6,12 @@ import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
 
-import google.generativeai as genai
+import google.genai as genai
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 
-genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel("gemini-1.5-flash")
+client = genai.Client(api_key=GEMINI_KEY)
 
 memory = {}
 last_call = {}
@@ -54,7 +53,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     prompt = f"{SYSTEM_PROMPT}\n\n{context_text}\nVega:"
 
     try:
-        response = model.generate_content(prompt).text
+        response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt).text
     except Exception as e:
         response = f"Error: {e}"
 
@@ -72,7 +71,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Simple placeholder (Gemini STT not direct here)
     text = "User sent a voice note. Respond naturally."
 
-    response = model.generate_content(f"{SYSTEM_PROMPT}\n{text}").text
+    response = client.models.generate_content(model="gemini-1.5-flash", contents=f"{SYSTEM_PROMPT}\n{text}").text
 
     await update.message.reply_text(response)
 
@@ -86,10 +85,15 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await file.download_to_drive(file_path)
 
     with open(file_path, "rb") as img:
-        response = model.generate_content([
+        image_bytes = img.read()
+
+    response = client.models.generate_content(
+        model="gemini-1.5-flash",
+        contents=[
             SYSTEM_PROMPT,
-            {"mime_type": "image/jpeg", "data": img.read()}
-        ])
+            genai.types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
+        ],
+    )
 
     await update.message.reply_text(response.text)
 
